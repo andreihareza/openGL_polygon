@@ -40,6 +40,10 @@ private:
     static unsigned int loadShaders(const char * vertex_file_path,
         const char * fragment_file_path);
 
+    static void handleMouseLeftClickPress(int x, int y);
+    static void handleMouseLeftClickRelease(int x, int y);
+
+    static void mouseMovement(int x, int y);
 
     static std::vector<float> stPointCoords;
     static std::vector<float> stPointColors;
@@ -52,5 +56,8 @@ private:
     static int stCoord_y;
 
     static CPolygon * stPolygon;
+
+    static bool stIsDragging;
+    static int stDraggingPointIndex;
 };
 

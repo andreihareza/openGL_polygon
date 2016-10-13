@@ -18,6 +18,9 @@ int COpenGLHandler::stCoord_y{};
 
 CPolygon * COpenGLHandler::stPolygon{nullptr};
 
+bool COpenGLHandler::stIsDragging{};
+int COpenGLHandler::stDraggingPointIndex;
+
 COpenGLHandler::COpenGLHandler(int argc, char ** argv)
 {
     init(argc, argv);
@@ -186,29 +189,88 @@ void COpenGLHandler::mouseFunction(int button, int state, int x, int y)
     /* Mouse left click is used to add points to polygon */
     if (button == GLUT_LEFT_BUTTON)
     {
-        /* On press, save click position */
         if (state == GLUT_DOWN)
         {
-            stCoord_x = x;
-            stCoord_y = y;
+            handleMouseLeftClickPress(x, y);
         }
 
         /* On release, in case mouse was not moved, add a point at that position */
         if (state == GLUT_UP)
         {
-            auto dist = [](int from, int to)
-            {
-                auto dif = from - to;
-                return dif < 0? -dif : dif;
-            };
-
-            int totalDist = dist(x, stCoord_x) + dist(y, stCoord_y);
-            if (totalDist < 5)
-            {
-                stPolygon->addPoint({x, y});
-            }
+            handleMouseLeftClickRelease(x, y);
         }
     }
+}
+
+void COpenGLHandler::handleMouseLeftClickPress(int x, int y)
+{
+    std::cout << "COpenGLHandler::" << __func__ << "(): " << x << ' ' << y << endl;
+    CLine::Point closestPoint;
+    int closestPos = stPolygon->findClosest({x, y}, closestPoint);
+
+    auto dist = [](int from, int to)
+    {
+        auto dif = from - to;
+        return dif < 0? -dif : dif;
+    };
+
+    /* Distance between polygon's closest point and current point */
+    int totalDist = dist(x, closestPoint.first) + dist(y, closestPoint.second);
+
+    std::cout << "COpenGLHandler::" << __func__ << "(): totalDist = " << totalDist << endl;
+
+    /* When a point is close to current click position, drag it */
+    if (totalDist < 5)
+    {
+        stIsDragging = true;
+        stDraggingPointIndex = closestPos;
+        glutMotionFunc(COpenGLHandler::mouseMovement);
+    }
+    else
+    {
+        /* When no point is close to current click position, prepare to add a new point */
+        stCoord_x = x;
+        stCoord_y = y;
+    }
+}
+
+void COpenGLHandler::handleMouseLeftClickRelease(int x, int y)
+{
+    std::cout << "COpenGLHandler::" << __func__ << "(): " << x << ' ' << y << endl;
+
+    /* If we were dragging before, stop dragging */
+    if (stIsDragging == true)
+    {
+        stIsDragging = false;
+        glutMotionFunc(nullptr);
+    }
+    /* If we were to add a new point, add it if mouse was not moved away */
+    else
+    {
+        auto dist = [](int from, int to)
+        {
+            auto dif = from - to;
+            return dif < 0? -dif : dif;
+        };
+
+        int totalDist = dist(x, stCoord_x) + dist(y, stCoord_y);
+        if (totalDist < 5)
+        {
+            stPolygon->addPoint({x, y});
+        }
+    }
+}
+
+void COpenGLHandler::mouseMovement(int x, int y)
+{
+    /* Mouse button coordonates are related to top right corner, not bottom right */
+    y = NUtility::height - y;
+
+    /* This is spammy. Commented */
+    // std::cout << "COpenGLHandler::" << __func__ << "(): " << x << ' ' << y << endl;
+
+    /* Whenever we are dragging and mouse moves, update the polygon */
+    stPolygon->editPoint(stDraggingPointIndex, {x, y});
 }
 
 void COpenGLHandler::notifyPolygonChanged(CPolygon & polygon)

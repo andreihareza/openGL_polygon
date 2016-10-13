@@ -8,17 +8,21 @@
 class CPolygon
 {
 public:
+    using iterator = std::vector<CLine>::iterator;
+
     void init(IOpenGLListener * openGLListener);
     void init(std::istream & file, IOpenGLListener * openGLListener);
 
     void addPoint(CLine::Point point);
+
+    int findClosest(CLine::Point initialPoint, CLine::Point & foundPoint);
+    void editPoint(int pointPos, CLine::Point newPoint);
 
     std::size_t size();
 
     CLine operator[](std::size_t pos);
     const CLine operator[](std::size_t pos) const;
 
-    using iterator = std::vector<CLine>::iterator;
     iterator begin();
     iterator end();
 

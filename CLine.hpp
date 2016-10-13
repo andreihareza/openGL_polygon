@@ -24,6 +24,9 @@ public:
 
     std::pair<Point, Point> getPoints();
 
+    void editPoint1(Point newPoint);
+    void editPoint2(Point newPoint);
+
 private:
     bool intersect(CLine & other);
 

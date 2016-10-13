@@ -180,3 +180,13 @@ std::pair<CLine::Point, CLine::Point> CLine::getPoints()
     return {mPoint1, mPoint2};
 }
 
+void CLine::editPoint1(Point newPoint)
+{
+    mPoint1 = newPoint;
+}
+
+void CLine::editPoint2(Point newPoint)
+{
+    mPoint2 = newPoint;
+}
+
