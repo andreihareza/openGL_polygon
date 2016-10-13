@@ -42,6 +42,8 @@ private:
 
     static void handleMouseLeftClickPress(int x, int y);
     static void handleMouseLeftClickRelease(int x, int y);
+    static void handleMouseRightClickPress(int x, int y);
+    static void handleMouseRightClickRelease(int x, int y);
 
     static void mouseMovement(int x, int y);
 

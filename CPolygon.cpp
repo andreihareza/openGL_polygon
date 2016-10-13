@@ -2,6 +2,7 @@
 #include <tuple>
 #include <cmath>
 #include <limits>
+#include <algorithm>
 using std::endl;
 
 
@@ -156,6 +157,27 @@ void CPolygon::editPoint(int pointPos, CLine::Point newPoint)
     /* Set new point for both lines containing it */
     mLines[pointPos].editPoint1(newPoint);
     otherLine.editPoint2(newPoint);
+
+    /* Check new polygon for line intersections */
+    checkIntersections();
+
+    /* Notify openGL that current polygon has changed */
+    mOpenGLListener->notifyPolygonChanged(*this);
+}
+
+void CPolygon::deletePoint(int pointPos)
+{
+    std::cout << "CPolygon::" << __func__ << "(): pointPos = " << pointPos << endl;
+
+    /* The other line in which current point takes part */
+    auto & otherLine = pointPos == 0? mLines.back() : mLines[pointPos-1];
+
+    /* The line which should be drawn after point removal */
+    CLine newLine = {otherLine.getPoints().first, mLines[pointPos].getPoints().second};
+
+    /* One of the lines will become the new line and the other one will be deleted */ 
+    otherLine = newLine;
+    mLines.erase(mLines.begin() + pointPos);
 
     /* Check new polygon for line intersections */
     checkIntersections();

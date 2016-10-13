@@ -200,6 +200,18 @@ void COpenGLHandler::mouseFunction(int button, int state, int x, int y)
             handleMouseLeftClickRelease(x, y);
         }
     }
+    if (button == GLUT_RIGHT_BUTTON)
+    {
+        if (state == GLUT_DOWN)
+        {
+            handleMouseRightClickPress(x, y);
+        }
+
+        if (state == GLUT_DOWN)
+        {
+            handleMouseRightClickRelease(x, y);
+        }
+    }
 }
 
 void COpenGLHandler::handleMouseLeftClickPress(int x, int y)
@@ -271,6 +283,43 @@ void COpenGLHandler::mouseMovement(int x, int y)
 
     /* Whenever we are dragging and mouse moves, update the polygon */
     stPolygon->editPoint(stDraggingPointIndex, {x, y});
+}
+
+void COpenGLHandler::handleMouseRightClickPress(int x, int y)
+{
+    std::cout << "COpenGLHandler::" << __func__ << "(): " << x << ' ' << y << endl;
+    stCoord_x = x;
+    stCoord_y = y;
+}
+
+void COpenGLHandler::handleMouseRightClickRelease(int x, int y)
+{
+    std::cout << "COpenGLHandler::" << __func__ << "(): " << x << ' ' << y << endl;
+
+    auto dist = [](int from, int to)
+    {
+        auto dif = from - to;
+        return dif < 0? -dif : dif;
+    };
+
+    /* Delete the point it if mouse was not moved away */
+    int totalDist = dist(x, stCoord_x) + dist(y, stCoord_y);
+    if (totalDist < 5)
+    {
+        CLine::Point closestPoint;
+        int closestPos = stPolygon->findClosest({x, y}, closestPoint);
+
+        /* Distance between polygon's closest point and current point */
+        totalDist = dist(x, closestPoint.first) + dist(y, closestPoint.second);
+
+        std::cout << "COpenGLHandler::" << __func__ << "(): totalDist = " << totalDist << endl;
+
+        /* If there's a point close to where we clicked, delete it */
+        if (totalDist < 5)
+        {
+            stPolygon->deletePoint(closestPos);
+        }
+    }
 }
 
 void COpenGLHandler::notifyPolygonChanged(CPolygon & polygon)

@@ -17,6 +17,7 @@ public:
 
     int findClosest(CLine::Point initialPoint, CLine::Point & foundPoint);
     void editPoint(int pointPos, CLine::Point newPoint);
+    void deletePoint(int pointPos);
 
     std::size_t size();
 
