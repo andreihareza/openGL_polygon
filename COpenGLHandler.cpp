@@ -8,6 +8,8 @@ using std::endl;
 
 std::vector<float> COpenGLHandler::stPointColors{};
 std::vector<float> COpenGLHandler::stPointCoords{};
+int COpenGLHandler::stPointsNum{};
+int COpenGLHandler::stIntersectionPointsNum{};
 
 unsigned int COpenGLHandler::stVboId{};
 unsigned int COpenGLHandler::stColorBufferId{};
@@ -19,7 +21,7 @@ int COpenGLHandler::stCoord_y{};
 CPolygon * COpenGLHandler::stPolygon{nullptr};
 
 bool COpenGLHandler::stIsDragging{};
-int COpenGLHandler::stDraggingPointIndex;
+int COpenGLHandler::stDraggingPointIndex{};
 
 COpenGLHandler::COpenGLHandler(int argc, char ** argv)
 {
@@ -47,8 +49,8 @@ void COpenGLHandler::init (int argc, char ** argv)
     /* Initialize glew */
     glewInit();
 
-    /* Background color white */
-    glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+    /* Background color black */
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
 void COpenGLHandler::draw(CPolygon & polygon)
@@ -63,6 +65,9 @@ void COpenGLHandler::draw(CPolygon & polygon)
 
     /* Line width */
     glLineWidth(3.0f);
+
+    /* Point size */
+    glPointSize(5.0f);
 
     /* Save polygon for point adding */
     stPolygon = &polygon;
@@ -81,6 +86,7 @@ void COpenGLHandler::preparePointsForDraw(CPolygon & polygon)
     stPointCoords.clear();
     stPointColors.clear();
 
+    /* Add lines to buffer */
     for (auto & line : polygon)
     {
         /* Point coords */
@@ -91,6 +97,31 @@ void COpenGLHandler::preparePointsForDraw(CPolygon & polygon)
         const auto & colors = line.getOpenGLPointColors();
         stPointColors.insert(stPointColors.end(), colors.begin(), colors.end());
     }
+
+    /* Add points to buffer */
+    for (auto & line : polygon)
+    {
+        /* Point coords */
+        const auto & coords = line.getOpenGLFirstPointCoords();
+        stPointCoords.insert(stPointCoords.end(), coords.begin(), coords.end());
+
+        /* Point color */
+        const auto & colors = line.getOpenGLFirstPointColors();
+        stPointColors.insert(stPointColors.end(), colors.begin(), colors.end());
+    }
+
+    /* Add intersection points to buffer */
+    const auto & intersectionPoints = polygon.getOpenGLIntersectionPoints();
+    stPointCoords.insert(stPointCoords.end(), intersectionPoints.begin(), intersectionPoints.end());
+
+    const auto & intersectionPointsColors = polygon.getOpenGLIntersectionPointsColors();
+    stPointColors.insert(stPointColors.end(), intersectionPointsColors.begin(), intersectionPointsColors.end());
+
+    /* Number of points/lines in polygon */
+    stPointsNum = polygon.size();
+
+    /* Number of intersection points */
+    stIntersectionPointsNum = polygon.getIntersectionPointsNum();
 
     /* Create VBO */
     createVBO();
@@ -104,7 +135,13 @@ void COpenGLHandler::renderFunction()
     glClear(GL_COLOR_BUFFER_BIT);
 
     /* Draw polygon line by line */
-    glDrawArrays(GL_LINES, 0, stPointCoords.size()/NUtility::dimensions);
+    glDrawArrays(GL_LINES, 0, 2*stPointsNum);
+
+    /*  Draw each point */
+    glDrawArrays(GL_POINTS, 2*stPointsNum, stPointsNum);
+
+    /* Draw intersection points */
+    glDrawArrays(GL_POINTS, 3*stPointsNum, stIntersectionPointsNum);
 
     /* Refresh image */
     glFlush();

@@ -66,12 +66,19 @@ void CPolygon::checkIntersections()
 {
     std::cout << "CPolygon::" << __func__ << "()" << endl;
 
+    mIntersectionPoints.clear();
+
     for (auto & line : mLines)
     {
-        if (line.intersectAny(mLines))
+        std::vector<CLine::Point> intersectionPoints = line.intersectAny(mLines);
+        if (!intersectionPoints.empty())
         {
             /* A line is supposed to be red if it intersects any other line */
             line.setColor(NUtility::EColor::RED);
+
+            /* Add intersection points to list */
+            mIntersectionPoints.insert(mIntersectionPoints.end(),
+                    intersectionPoints.begin(), intersectionPoints.end());
         }
         else
         {
@@ -79,6 +86,11 @@ void CPolygon::checkIntersections()
             line.setColor(NUtility::EColor::GREEN);
         }
     }
+
+    /* Remove duplicates from array */
+    std::sort(mIntersectionPoints.begin(), mIntersectionPoints.end());
+    auto newEnd = std::unique(mIntersectionPoints.begin(), mIntersectionPoints.end());
+    mIntersectionPoints.erase(newEnd, mIntersectionPoints.end());
 }
 
 void CPolygon::addPoint(CLine::Point point)
@@ -175,7 +187,7 @@ void CPolygon::deletePoint(int pointPos)
     /* The line which should be drawn after point removal */
     CLine newLine = {otherLine.getPoints().first, mLines[pointPos].getPoints().second};
 
-    /* One of the lines will become the new line and the other one will be deleted */ 
+    /* One of the lines will become the new line and the other one will be deleted */
     otherLine = newLine;
     mLines.erase(mLines.begin() + pointPos);
 
@@ -184,6 +196,47 @@ void CPolygon::deletePoint(int pointPos)
 
     /* Notify openGL that current polygon has changed */
     mOpenGLListener->notifyPolygonChanged(*this);
+}
+
+std::vector<float> CPolygon::getOpenGLIntersectionPoints()
+{
+    std::vector<float> coords;
+
+    for (auto currentPoint : mIntersectionPoints)
+    {
+        /* Coords given to openGL should be a number between -1 and 1 */
+        coords.push_back(currentPoint.first / NUtility::width * 2 - 1);
+        coords.push_back(currentPoint.second / NUtility::height * 2 - 1);
+
+        /* Polygon is 2d, so 3rd dimension is always 0 */
+        if (NUtility::dimensions == 3)
+        {
+            coords.push_back(0.0f);
+        }
+        if (NUtility::dimensions == 4)
+        {
+            coords.insert(coords.end(), {0.0f, 1.0f});
+        }
+    }
+
+    return coords;
+}
+
+std::vector<float> CPolygon::getOpenGLIntersectionPointsColors()
+{
+    std::vector<float> colors;
+
+    for (auto i=0u; i<mIntersectionPoints.size(); ++i)
+    {
+        colors.insert(colors.end(), {1.0f, 1.0f, 0.0f, 0.0f});
+    }
+
+    return colors;
+}
+
+std::size_t CPolygon::getIntersectionPointsNum()
+{
+    return mIntersectionPoints.size();
 }
 
 CPolygon::iterator CPolygon::begin()

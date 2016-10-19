@@ -19,6 +19,11 @@ public:
     void editPoint(int pointPos, CLine::Point newPoint);
     void deletePoint(int pointPos);
 
+    std::size_t getIntersectionPointsNum();
+
+    std::vector<float> getOpenGLIntersectionPoints();
+    std::vector<float> getOpenGLIntersectionPointsColors();
+
     std::size_t size();
 
     CLine operator[](std::size_t pos);
@@ -37,6 +42,7 @@ private:
     void checkIntersections();
 
     std::vector<CLine> mLines;
+    std::vector<CLine::Point> mIntersectionPoints;
 
     IOpenGLListener * mOpenGLListener;
 };

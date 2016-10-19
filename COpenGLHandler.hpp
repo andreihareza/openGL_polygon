@@ -49,6 +49,8 @@ private:
 
     static std::vector<float> stPointCoords;
     static std::vector<float> stPointColors;
+    static int stPointsNum;
+    static int stIntersectionPointsNum;
 
     static unsigned int stVboId;
     static unsigned int stColorBufferId;

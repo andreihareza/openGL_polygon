@@ -10,7 +10,7 @@ public:
 
     CLine(Point p1, Point p2);
 
-    bool intersectAny(std::vector<CLine> & otherLines);
+    std::vector<Point> intersectAny(std::vector<CLine> & otherLines);
 
     bool operator==(const CLine & other);
     bool operator!=(const CLine & other);
@@ -19,7 +19,11 @@ public:
 
     void printColor(std::ostream & file);
 
+    std::vector<float> getOpenGLFirstPointCoords();
+    std::vector<float> getOpenGLSecondPointCoords();
     std::vector<float> getOpenGLPointCoords();
+
+    std::vector<float> getOpenGLFirstPointColors();
     std::vector<float> getOpenGLPointColors();
 
     std::pair<Point, Point> getPoints();
@@ -28,7 +32,7 @@ public:
     void editPoint2(Point newPoint);
 
 private:
-    bool intersect(CLine & other);
+    bool intersect(CLine & other, Point & intersectionPoint);
 
     Point mPoint1;
     Point mPoint2;
