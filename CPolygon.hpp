@@ -20,9 +20,15 @@ public:
     void deletePoint(int pointPos);
 
     std::size_t getIntersectionPointsNum();
+    std::size_t getInsidePointsNum();
 
     std::vector<float> getOpenGLIntersectionPoints();
     std::vector<float> getOpenGLIntersectionPointsColors();
+
+    std::vector<float> getOpenGLInsidePoints();
+    std::vector<float> getOpenGLInsidePointsColors();
+
+    CLine::Point getCenterOfMass();
 
     std::size_t size();
 
@@ -40,10 +46,16 @@ private:
     std::vector<CLine::Point> readPoints(std::istream & file);
 
     void checkIntersections();
+    void updateInsidePoints();
+    void updateCenterOfMass();
 
     std::vector<CLine> mLines;
     std::vector<CLine::Point> mIntersectionPoints;
 
+    std::vector<CLine::Point> mPointsInside;
+
     IOpenGLListener * mOpenGLListener;
+
+    CLine::Point mCenterOfMass;
 };
 

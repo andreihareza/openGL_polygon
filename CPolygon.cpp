@@ -91,6 +91,48 @@ void CPolygon::checkIntersections()
     std::sort(mIntersectionPoints.begin(), mIntersectionPoints.end());
     auto newEnd = std::unique(mIntersectionPoints.begin(), mIntersectionPoints.end());
     mIntersectionPoints.erase(newEnd, mIntersectionPoints.end());
+
+    /* Find all points inside polygon */
+    updateInsidePoints();
+
+    /* Update center of mass */
+    updateCenterOfMass();
+}
+
+void CPolygon::updateInsidePoints()
+{
+    mPointsInside.clear();
+
+    for (int x=0; x<NUtility::width; ++x)
+    {
+        for (int y=0; y<NUtility::height; ++y)
+        {
+            CLine checkedLine {CLine::Point{x, y}, NUtility::exteriorPoint};
+            int intersections = checkedLine.intersectAny(mLines).size();
+            if (intersections % 2 == 1)
+            {
+                mPointsInside.push_back(CLine::Point({x, y}));
+            }
+        }
+    }
+}
+
+void CPolygon::updateCenterOfMass()
+{
+    mCenterOfMass = {0, 0};
+    for (auto line : mLines)
+    {
+        auto firstPoint = line.getPoints().first;
+        mCenterOfMass.first += firstPoint.first;
+        mCenterOfMass.second += firstPoint.second;
+    }
+    mCenterOfMass.first = mCenterOfMass.first / mLines.size();
+    mCenterOfMass.second = mCenterOfMass.second / mLines.size();
+}
+
+CLine::Point CPolygon::getCenterOfMass()
+{
+    return mCenterOfMass;
 }
 
 void CPolygon::addPoint(CLine::Point point)
@@ -205,8 +247,10 @@ std::vector<float> CPolygon::getOpenGLIntersectionPoints()
     for (auto currentPoint : mIntersectionPoints)
     {
         /* Coords given to openGL should be a number between -1 and 1 */
-        coords.push_back(currentPoint.first / NUtility::width * 2 - 1);
-        coords.push_back(currentPoint.second / NUtility::height * 2 - 1);
+        // coords.push_back(currentPoint.first / NUtility::width * 2 - 1);
+        // coords.push_back(currentPoint.second / NUtility::height * 2 - 1);
+        coords.push_back(currentPoint.first);
+        coords.push_back(currentPoint.second);
 
         /* Polygon is 2d, so 3rd dimension is always 0 */
         if (NUtility::dimensions == 3)
@@ -228,7 +272,45 @@ std::vector<float> CPolygon::getOpenGLIntersectionPointsColors()
 
     for (auto i=0u; i<mIntersectionPoints.size(); ++i)
     {
-        colors.insert(colors.end(), {1.0f, 1.0f, 0.0f, 0.0f});
+        colors.insert(colors.end(), {1.0f, 1.0f, 0.0f, 1.0f});
+    }
+
+    return colors;
+}
+
+std::vector<float> CPolygon::getOpenGLInsidePoints()
+{
+    std::vector<float> coords;
+
+    for (auto currentPoint : mPointsInside)
+    {
+        /* Coords given to openGL should be a number between -1 and 1 */
+        // coords.push_back(currentPoint.first / NUtility::width * 2 - 1);
+        // coords.push_back(currentPoint.second / NUtility::height * 2 - 1);
+        coords.push_back(currentPoint.first);
+        coords.push_back(currentPoint.second);
+
+        /* Polygon is 2d, so 3rd dimension is always 0 */
+        if (NUtility::dimensions == 3)
+        {
+            coords.push_back(0.0f);
+        }
+        if (NUtility::dimensions == 4)
+        {
+            coords.insert(coords.end(), {0.0f, 1.0f});
+        }
+    }
+
+    return coords;
+}
+
+std::vector<float> CPolygon::getOpenGLInsidePointsColors()
+{
+    std::vector<float> colors;
+
+    for (auto i=0u; i<mPointsInside.size(); ++i)
+    {
+        colors.insert(colors.end(), {0.18f, 0.18f, 0.60f, 0.8f});
     }
 
     return colors;
@@ -237,6 +319,11 @@ std::vector<float> CPolygon::getOpenGLIntersectionPointsColors()
 std::size_t CPolygon::getIntersectionPointsNum()
 {
     return mIntersectionPoints.size();
+}
+
+std::size_t CPolygon::getInsidePointsNum()
+{
+    return mPointsInside.size();
 }
 
 CPolygon::iterator CPolygon::begin()

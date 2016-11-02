@@ -40,3 +40,8 @@ private:
     NUtility::EColor mColor;
 };
 
+namespace NUtility
+{
+    const CLine::Point exteriorPoint = {-2.0f, -6.0f};
+}
+

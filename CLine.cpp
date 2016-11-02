@@ -156,8 +156,10 @@ std::vector<float> CLine::getOpenGLFirstPointCoords()
 {
     std::vector<float> coords;
     /* Coords given to openGL should be a number between -1 and 1 */
-    coords.push_back(mPoint1.first / NUtility::width * 2 - 1);
-    coords.push_back(mPoint1.second / NUtility::height * 2 - 1);
+    // coords.push_back(mPoint1.first / NUtility::width * 2 - 1);
+    // coords.push_back(mPoint1.second / NUtility::height * 2 - 1);
+    coords.push_back(mPoint1.first);
+    coords.push_back(mPoint1.second);
 
     /* Polygon is 2d, so 3rd dimension is always 0 */
     if (NUtility::dimensions == 3)
@@ -176,8 +178,10 @@ std::vector<float> CLine::getOpenGLSecondPointCoords()
 {
     std::vector<float> coords;
     /* Coords given to openGL should be a number between -1 and 1 */
-    coords.push_back(mPoint2.first / NUtility::width * 2 - 1);
-    coords.push_back(mPoint2.second / NUtility::height * 2 - 1);
+    // coords.push_back(mPoint2.first / NUtility::width * 2 - 1);
+    // coords.push_back(mPoint2.second / NUtility::height * 2 - 1);
+    coords.push_back(mPoint2.first);
+    coords.push_back(mPoint2.second);
 
     /* Polygon is 2d, so 3rd dimension is always 0 */
     if (NUtility::dimensions == 3)
@@ -209,7 +213,7 @@ std::vector<float> CLine::getOpenGLFirstPointColors()
 {
     std::vector<float> colors;
 
-    colors.insert(colors.end(), {0.0f, 0.0f, 1.0f, 0.0f});
+    colors.insert(colors.end(), {0.0f, 0.0f, 1.0f, 1.0f});
 
     return colors;
 }
@@ -223,15 +227,15 @@ std::vector<float> CLine::getOpenGLPointColors()
         case NUtility::EColor::GREEN:
         {
             /* Both points are green */
-            colors.insert(colors.end(), {0.0f, 1.0f, 0.0f, 0.0f});
-            colors.insert(colors.end(), {0.0f, 1.0f, 0.0f, 0.0f});
+            colors.insert(colors.end(), {0.0f, 1.0f, 0.0f, 1.0f});
+            colors.insert(colors.end(), {0.0f, 1.0f, 0.0f, 1.0f});
             break;
         }
         case NUtility::EColor::RED:
         {
             /* Both points are red */
-            colors.insert(colors.end(), {1.0f, 0.0f, 0.0f, 0.0f});
-            colors.insert(colors.end(), {1.0f, 0.0f, 0.0f, 0.0f});
+            colors.insert(colors.end(), {1.0f, 0.0f, 0.0f, 1.0f});
+            colors.insert(colors.end(), {1.0f, 0.0f, 0.0f, 1.0f});
             break;
         }
         default:

@@ -1,6 +1,7 @@
 #include "COpenGLHandler.hpp"
 
 #include <iostream>
+#include <cmath>
 #include "utility.hpp"
 #include "CPolygon.hpp"
 
@@ -10,10 +11,16 @@ std::vector<float> COpenGLHandler::stPointColors{};
 std::vector<float> COpenGLHandler::stPointCoords{};
 int COpenGLHandler::stPointsNum{};
 int COpenGLHandler::stIntersectionPointsNum{};
+int COpenGLHandler::stInsidePointsNum{};
 
 unsigned int COpenGLHandler::stVboId{};
 unsigned int COpenGLHandler::stColorBufferId{};
-unsigned int COpenGLHandler::stShadersId{};
+unsigned int COpenGLHandler::stShaderId{};
+unsigned int COpenGLHandler::stRotateShaderId{};
+unsigned int COpenGLHandler::stResizeMatrixId{};
+unsigned int COpenGLHandler::stRotationMatrixId{};
+unsigned int COpenGLHandler::stPreRotationMatrixId{};
+unsigned int COpenGLHandler::stPostRotationMatrixId{};
 
 int COpenGLHandler::stCoord_x{};
 int COpenGLHandler::stCoord_y{};
@@ -22,6 +29,13 @@ CPolygon * COpenGLHandler::stPolygon{nullptr};
 
 bool COpenGLHandler::stIsDragging{};
 int COpenGLHandler::stDraggingPointIndex{};
+
+std::vector<float> COpenGLHandler::stResizeMatrix{};
+std::vector<float> COpenGLHandler::stRotationMatrix{};
+std::vector<float> COpenGLHandler::stPreRotationMatrix{};
+std::vector<float> COpenGLHandler::stPostRotationMatrix{};
+
+bool COpenGLHandler::stIsPolygonRotated{false};
 
 COpenGLHandler::COpenGLHandler(int argc, char ** argv)
 {
@@ -72,6 +86,7 @@ void COpenGLHandler::draw(CPolygon & polygon)
     /* Save polygon for point adding */
     stPolygon = &polygon;
     glutMouseFunc(COpenGLHandler::mouseFunction);
+    glutKeyboardFunc(COpenGLHandler::keyboardFunction);
 
     /* Draw */
     glutDisplayFunc(COpenGLHandler::renderFunction);
@@ -117,11 +132,27 @@ void COpenGLHandler::preparePointsForDraw(CPolygon & polygon)
     const auto & intersectionPointsColors = polygon.getOpenGLIntersectionPointsColors();
     stPointColors.insert(stPointColors.end(), intersectionPointsColors.begin(), intersectionPointsColors.end());
 
+    /* Add inside points to buffer */
+    const auto & insidePoints = polygon.getOpenGLInsidePoints();
+    stPointCoords.insert(stPointCoords.end(), insidePoints.begin(), insidePoints.end());
+
+    const auto & insidePointsColors = polygon.getOpenGLInsidePointsColors();
+    stPointColors.insert(stPointColors.end(), insidePointsColors.begin(), insidePointsColors.end());
+
     /* Number of points/lines in polygon */
     stPointsNum = polygon.size();
 
     /* Number of intersection points */
     stIntersectionPointsNum = polygon.getIntersectionPointsNum();
+
+    /* Number of points inside */
+    stInsidePointsNum = polygon.getInsidePointsNum();
+
+    /* Update transformation matrices to rotate polygon in (0, 0) */
+    if (stIsPolygonRotated == true)
+    {
+        updatePreRotateTransformationMatrices();
+    }
 
     /* Create VBO */
     createVBO();
@@ -142,6 +173,12 @@ void COpenGLHandler::renderFunction()
 
     /* Draw intersection points */
     glDrawArrays(GL_POINTS, 3*stPointsNum, stIntersectionPointsNum);
+
+    /* Draw inside points */
+    glPointSize(1.0f);
+    glDrawArrays(GL_POINTS, 3*stPointsNum+stIntersectionPointsNum, stInsidePointsNum);
+    glPointSize(5.0f);
+
 
     /* Refresh image */
     glFlush();
@@ -201,10 +238,97 @@ void COpenGLHandler::destroyVBO()
 void COpenGLHandler::createShaders()
 {
     std::cout << "COpenGLHandler::" << __func__ << "()" << endl;
-    /* Load shaders from file */
-    stShadersId = loadShaders("shader.vert", "shader.frag");
 
-    glUseProgram(stShadersId);
+    /* Create matrices */
+    createResizeMatrix();
+    createRotationMatrix();
+
+    /* Load shaders from file */
+    stShaderId = loadShaders("shader.vert", "shader.frag");
+    stRotateShaderId = loadShaders("shaderRotate.vert", "shader.frag");
+
+    useDefaultShader();
+}
+
+void COpenGLHandler::useDefaultShader()
+{
+    std::cout << "COpenGLHandler::" << __func__ << "()" << endl;
+    glUseProgram(stShaderId);
+
+    stResizeMatrixId = glGetUniformLocation(stShaderId, "resizeMatrix");
+    glUniformMatrix4fv(stResizeMatrixId, 1, GL_TRUE, stResizeMatrix.data());
+}
+
+void COpenGLHandler::useRotationShader()
+{
+    std::cout << "COpenGLHandler::" << __func__ << "()" << endl;
+    glUseProgram(stRotateShaderId);
+
+    stResizeMatrixId = glGetUniformLocation(stRotateShaderId, "resizeMatrix");
+    glUniformMatrix4fv(stResizeMatrixId, 1, GL_TRUE, stResizeMatrix.data());
+
+    stRotationMatrixId = glGetUniformLocation(stRotateShaderId, "rotationMatrix");
+    glUniformMatrix4fv(stRotationMatrixId, 1, GL_TRUE, stRotationMatrix.data());
+
+    updatePreRotateTransformationMatrices();
+}
+
+void COpenGLHandler::updatePreRotateTransformationMatrices()
+{
+    std::cout << "COpenGLHandler::" << __func__ << "()" << endl;
+    stPreRotationMatrix.resize(16, 0.0f);
+    stPostRotationMatrix.resize(16, 0.0f);
+
+    stPreRotationMatrix[0] = 1.0f;
+    stPreRotationMatrix[5] = 1.0f;
+    stPreRotationMatrix[10] = 1.0f;
+    stPreRotationMatrix[15] = 1.0f;
+
+    stPostRotationMatrix[0] = 1.0f;
+    stPostRotationMatrix[5] = 1.0f;
+    stPostRotationMatrix[10] = 1.0f;
+    stPostRotationMatrix[15] = 1.0f;
+
+    auto centerOfMass = stPolygon->getCenterOfMass();
+    std::cout << "COpenGLHandler::" << __func__ << "(): centerOfMass:"
+        << centerOfMass.first << ' ' << centerOfMass.second << endl;
+
+    stPreRotationMatrix[3] = -centerOfMass.first;
+    stPreRotationMatrix[7] = -centerOfMass.second;
+
+    stPostRotationMatrix[3] = centerOfMass.first;
+    stPostRotationMatrix[7] = centerOfMass.second;
+
+    /* Pre-post rotation */
+    stPreRotationMatrixId = glGetUniformLocation(stRotateShaderId, "preRotationMatrix");
+    glUniformMatrix4fv(stPreRotationMatrixId, 1, GL_TRUE, stPreRotationMatrix.data());
+
+    stPostRotationMatrixId = glGetUniformLocation(stRotateShaderId, "postRotationMatrix");
+    glUniformMatrix4fv(stPostRotationMatrixId, 1, GL_TRUE, stPostRotationMatrix.data());
+}
+
+void COpenGLHandler::createResizeMatrix()
+{
+    stResizeMatrix.resize(16, 0.0f);
+
+    stResizeMatrix[0] = 2.0f/NUtility::width;
+    stResizeMatrix[3] = -1;
+    stResizeMatrix[5] = 2.0f/NUtility::height;
+    stResizeMatrix[7] = -1;
+    stResizeMatrix[10] = 1.0f;
+    stResizeMatrix[15] = 1.0f;
+}
+
+void COpenGLHandler::createRotationMatrix()
+{
+    stRotationMatrix.resize(16, 0.0f);
+
+    stRotationMatrix[0] = cos(M_PI/4);
+    stRotationMatrix[1] = -sin(M_PI/4);
+    stRotationMatrix[4] = sin(M_PI/4);
+    stRotationMatrix[5] = cos(M_PI/4);
+
+    stRotationMatrix[15] = 1.0f;
 }
 
 void COpenGLHandler::destroyShaders()
@@ -212,7 +336,8 @@ void COpenGLHandler::destroyShaders()
     std::cout << "COpenGLHandler::" << __func__ << "()" << endl;
 
     /* Cleanup */
-    glDeleteProgram(stShadersId);
+    glDeleteProgram(stShaderId);
+    glDeleteProgram(stRotateShaderId);
 }
 
 void COpenGLHandler::mouseFunction(int button, int state, int x, int y)
@@ -222,6 +347,11 @@ void COpenGLHandler::mouseFunction(int button, int state, int x, int y)
 
     std::cout << "COpenGLHandler::" << __func__ << "(): " <<
         button << ' ' << state << ' ' << x << ' ' << y << endl;
+
+    if (stIsPolygonRotated == true)
+    {
+        return;
+    }
 
     /* Mouse left click is used to add points to polygon */
     if (button == GLUT_LEFT_BUTTON)
@@ -248,6 +378,19 @@ void COpenGLHandler::mouseFunction(int button, int state, int x, int y)
         {
             handleMouseRightClickRelease(x, y);
         }
+    }
+}
+
+void COpenGLHandler::keyboardFunction(unsigned char key, int x, int y)
+{
+    std::cout << "COpenGLHandler::" << __func__ << "(): " << key << endl;
+
+    (void)x;
+    (void)y;
+
+    if (key == 'r' || key == 'R')
+    {
+        handleRotateKeyPress();
     }
 }
 
@@ -357,6 +500,22 @@ void COpenGLHandler::handleMouseRightClickRelease(int x, int y)
             stPolygon->deletePoint(closestPos);
         }
     }
+}
+
+void COpenGLHandler::handleRotateKeyPress()
+{
+    if (stIsPolygonRotated == false)
+    {
+        useRotationShader();
+        stIsPolygonRotated = true;
+    }
+    else
+    {
+        useDefaultShader();
+        stIsPolygonRotated = false;
+    }
+
+    glutPostRedisplay();
 }
 
 void COpenGLHandler::notifyPolygonChanged(CPolygon & polygon)
