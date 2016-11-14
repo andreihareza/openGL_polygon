@@ -2,10 +2,12 @@
 
 #include <iostream>
 #include <cmath>
+#include <thread>
 #include "utility.hpp"
 #include "CPolygon.hpp"
 
 using std::endl;
+using namespace std::chrono_literals;
 
 std::vector<float> COpenGLHandler::stPointColors{};
 std::vector<float> COpenGLHandler::stPointCoords{};
@@ -36,6 +38,11 @@ std::vector<float> COpenGLHandler::stPreRotationMatrix{};
 std::vector<float> COpenGLHandler::stPostRotationMatrix{};
 
 bool COpenGLHandler::stIsPolygonRotated{false};
+
+bool COpenGLHandler::stZKeyPressed{false};
+bool COpenGLHandler::stXKeyPressed{false};
+
+float COpenGLHandler::stRotationDegrees{};
 
 COpenGLHandler::COpenGLHandler(int argc, char ** argv)
 {
@@ -87,6 +94,8 @@ void COpenGLHandler::draw(CPolygon & polygon)
     stPolygon = &polygon;
     glutMouseFunc(COpenGLHandler::mouseFunction);
     glutKeyboardFunc(COpenGLHandler::keyboardFunction);
+    glutKeyboardUpFunc(COpenGLHandler::keyboardFunctionRelease);
+    glutIgnoreKeyRepeat(GLUT_KEY_REPEAT_ON);
 
     /* Draw */
     glutDisplayFunc(COpenGLHandler::renderFunction);
@@ -259,14 +268,18 @@ void COpenGLHandler::useDefaultShader()
     glUniformMatrix4fv(stResizeMatrixId, 1, GL_TRUE, stResizeMatrix.data());
 }
 
-void COpenGLHandler::useRotationShader()
+void COpenGLHandler::useRotationShader(float degrees)
 {
     std::cout << "COpenGLHandler::" << __func__ << "()" << endl;
-    glUseProgram(stRotateShaderId);
+    if (stIsPolygonRotated == false)
+    {
+        glUseProgram(stRotateShaderId);
+    }
 
     stResizeMatrixId = glGetUniformLocation(stRotateShaderId, "resizeMatrix");
     glUniformMatrix4fv(stResizeMatrixId, 1, GL_TRUE, stResizeMatrix.data());
 
+    createRotationMatrix(degrees);
     stRotationMatrixId = glGetUniformLocation(stRotateShaderId, "rotationMatrix");
     glUniformMatrix4fv(stRotationMatrixId, 1, GL_TRUE, stRotationMatrix.data());
 
@@ -319,14 +332,16 @@ void COpenGLHandler::createResizeMatrix()
     stResizeMatrix[15] = 1.0f;
 }
 
-void COpenGLHandler::createRotationMatrix()
+void COpenGLHandler::createRotationMatrix(float degrees)
 {
     stRotationMatrix.resize(16, 0.0f);
 
-    stRotationMatrix[0] = cos(M_PI/4);
-    stRotationMatrix[1] = -sin(M_PI/4);
-    stRotationMatrix[4] = sin(M_PI/4);
-    stRotationMatrix[5] = cos(M_PI/4);
+    float radians = M_PI/180.0f * degrees;
+
+    stRotationMatrix[0] = cos(radians);
+    stRotationMatrix[1] = -sin(radians);
+    stRotationMatrix[4] = sin(radians);
+    stRotationMatrix[5] = cos(radians);
 
     stRotationMatrix[15] = 1.0f;
 }
@@ -391,6 +406,108 @@ void COpenGLHandler::keyboardFunction(unsigned char key, int x, int y)
     if (key == 'r' || key == 'R')
     {
         handleRotateKeyPress();
+    }
+
+    if (key == 'z' || key == 'Z')
+    {
+        handleRotateLeftKeyPress();
+    }
+
+    if (key == 'x' || key == 'X')
+    {
+        handleRotateRightKeyPress();
+    }
+}
+
+void COpenGLHandler::keyboardFunctionRelease(unsigned char key, int x, int y)
+{
+    std::cout << "COpenGLHandler::" << __func__ << "(): " << key << endl;
+
+    (void)x;
+    (void)y;
+
+    if (key == 'z' || key == 'Z')
+    {
+        handleRotateLeftKeyRelease();
+    }
+
+    if (key == 'x' || key == 'X')
+    {
+        handleRotateRightKeyRelease();
+    }
+}
+
+void COpenGLHandler::handleRotateLeftKeyPress()
+{
+    std::cout << "COpenGLHandler::" << __func__ << "()" << endl;
+    if (stZKeyPressed == true)
+    {
+        return;
+    }
+
+    stZKeyPressed = true;
+    glutTimerFunc(0, timerRotateLeft, 0);
+}
+
+void COpenGLHandler::handleRotateLeftKeyRelease()
+{
+    std::cout << "COpenGLHandler::" << __func__ << "()" << endl;
+    stZKeyPressed = false;
+}
+
+void COpenGLHandler::timerRotateLeft(int value)
+{
+    (void)value;
+    if (stZKeyPressed == true)
+    {
+        stRotationDegrees = stRotationDegrees + 3.0f;
+        if (stRotationDegrees > 360.0f)
+        {
+            stRotationDegrees = stRotationDegrees - 360.0f;
+        }
+
+        useRotationShader(stRotationDegrees);
+        stIsPolygonRotated = true;
+        glutPostRedisplay();
+
+        glutTimerFunc(10, timerRotateLeft, 0);
+    }
+}
+
+void COpenGLHandler::handleRotateRightKeyPress()
+{
+    std::cout << "COpenGLHandler::" << __func__ << "()" << endl;
+    if (stXKeyPressed == true)
+    {
+        return;
+    }
+
+    stXKeyPressed = true;
+    glutTimerFunc(0, timerRotateRight, 0);
+}
+
+void COpenGLHandler::handleRotateRightKeyRelease()
+{
+    std::cout << "COpenGLHandler::" << __func__ << "()" << endl;
+    stXKeyPressed = false;
+}
+
+void COpenGLHandler::timerRotateRight(int value)
+{
+    (void)value;
+    if (stXKeyPressed == true)
+    {
+        stRotationDegrees = stRotationDegrees - 3.0f;
+        if (stRotationDegrees < 0.0f)
+        {
+            stRotationDegrees = stRotationDegrees + 360.0f;
+        }
+
+        useRotationShader(stRotationDegrees);
+        stIsPolygonRotated = true;
+        glutPostRedisplay();
+
+        glutTimerFunc(10, timerRotateRight, 0);
     }
 }
 
@@ -508,11 +625,13 @@ void COpenGLHandler::handleRotateKeyPress()
     {
         useRotationShader();
         stIsPolygonRotated = true;
+        stRotationDegrees = 45.0f;
     }
     else
     {
         useDefaultShader();
         stIsPolygonRotated = false;
+        stRotationDegrees = 0.0f;
     }
 
     glutPostRedisplay();

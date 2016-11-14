@@ -35,11 +35,15 @@ private:
             unsigned char key,
             int x, int y);
 
+    static void keyboardFunctionRelease(
+            unsigned char key,
+            int x, int y);
+
     static void createVBO();
     static void createShaders();
 
     static void useDefaultShader();
-    static void useRotationShader();
+    static void useRotationShader(float degrees = 45.0f);
 
     static void destroyVBO();
     static void destroyShaders();
@@ -51,12 +55,21 @@ private:
     static void handleMouseLeftClickRelease(int x, int y);
     static void handleMouseRightClickPress(int x, int y);
     static void handleMouseRightClickRelease(int x, int y);
+
     static void handleRotateKeyPress();
+
+    static void handleRotateLeftKeyPress();
+    static void handleRotateLeftKeyRelease();
+    static void timerRotateLeft(int value);
+
+    static void handleRotateRightKeyPress();
+    static void handleRotateRightKeyRelease();
+    static void timerRotateRight(int value);
 
     static void mouseMovement(int x, int y);
 
     static void createResizeMatrix();
-    static void createRotationMatrix();
+    static void createRotationMatrix(float degrees = 45.0f);
     static void updatePreRotateTransformationMatrices();
 
 
@@ -91,5 +104,10 @@ private:
     static std::vector<float> stPostRotationMatrix;
 
     static bool stIsPolygonRotated;
+
+    static bool stZKeyPressed;
+    static bool stXKeyPressed;
+
+    static float stRotationDegrees;
 };
 
